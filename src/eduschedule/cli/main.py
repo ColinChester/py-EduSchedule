@@ -1,10 +1,10 @@
-import subprocess
-import typer
-from typing import Optional
-import os
-import sys
 import csv
-from pathlib import Path
+import os
+import subprocess
+import sys
+from typing import Optional
+import typer
+
 from eduschedule.adapters.sql.engine import session_scope
 from eduschedule.adapters.sql.repositories.employees import EmployeeRepo
 
@@ -74,6 +74,33 @@ def parseRoles(
         for role, names in roles.items():
             typer.echo(f"{role}: {', '.join(names)}")
 
+
+
+@app.command("import-employees", help="Import employees from a CSV file")
+def importEmployees(
+    csv_file: Path = typer.Argument(
+        ..., exists=True, file_okay=True, dir_okay=False, readable=True, resolve_path=True, help="CSV file path"
+    )
+):
+    """Read employees from *csv_file* and add them to the database."""
+    with csv_file.open(newline="") as fh, session_scope() as s:
+        reader = csv.DictReader(fh)
+        repo = EmployeeRepo(s)
+        added = 0
+        for row in reader:
+            name = row.get("name")
+            email = row.get("email")
+            if not name or not email:
+                continue
+            role = row.get("role") or None
+            max_hours_raw = row.get("max_hours") or row.get("maxHours")
+            try:
+                max_hours = int(max_hours_raw) if max_hours_raw else 20
+            except ValueError:
+                max_hours = 20
+            repo.create(name=name, email=email, roleName=role, maxHours=max_hours)
+            added += 1
+    typer.echo(f"Imported {added} employees from {csv_file}")
 
 @app.command("diagnostic")
 def statsForNerds():
