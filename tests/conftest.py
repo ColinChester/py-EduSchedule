@@ -1,6 +1,5 @@
 import os
 import subprocess
-import pathlib
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -27,8 +26,8 @@ def session(unitEngine):
         s.close()
 
 # Creates temp sqlite db, runs 'alembic upgrade head' with temp url and returns sqlalchemy url
-@pytest.fixture(scope=session)
-def alembicOperations(tmp_path_factory):
+@pytest.fixture(scope="session")
+def tempDbUrl(tmp_path_factory):
     dbFile = tmp_path_factory.mktemp("db") / "alembic.db"
     url = f'sqlite:///{dbFile}'
     env = os.environ.copy()

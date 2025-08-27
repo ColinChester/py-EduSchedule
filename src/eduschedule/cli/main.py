@@ -1,4 +1,6 @@
 import subprocess
+import csv
+from pathlib import Path
 import typer
 from typing import Optional
 import os
@@ -39,6 +41,24 @@ def listEmployees():
 def statsForNerds():
     from eduschedule.config import DATABASE_URL
     typer.echo(f'Package importable, Database URL: {os.getenv("DATABASE_URL", DATABASE_URL)}')
+
+
+@app.command("import-employees", help="Import employees from a CSV file")
+def importEmployees(csv_file: Path = typer.Argument(..., exists=True, dir_okay=False, readable=True, resolve_path=True)):
+    """Read employees from *csv_file* and add them to the database."""
+    with csv_file.open(newline="") as fh, session_scope() as s:
+        reader = csv.DictReader(fh)
+        repo = EmployeeRepo(s)
+        count = 0
+        for row in reader:
+            name = row.get("name") or row.get("Name")
+            email = row.get("email") or row.get("Email")
+            role = row.get("role") or row.get("Role")
+            max_hours_raw = row.get("max_hours") or row.get("maxHours") or row.get("MaxHours")
+            max_hours = int(max_hours_raw) if max_hours_raw else 20
+            repo.create(name=name, email=email, roleName=role, maxHours=max_hours)
+            count += 1
+    typer.echo(f"Imported {count} employees from {csv_file}")
 
 if __name__ == "__main__":
     app()
