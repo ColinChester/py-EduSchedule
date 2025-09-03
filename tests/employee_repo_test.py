@@ -29,3 +29,13 @@ def testCreateRoleRow(session):
     r = updateRole(session, "Bag-Chaser")
     session.commit()
     assert r.id is not None
+
+def testCreateWithoutRole(session):
+    repo = EmployeeRepo(session)
+    emp = repo.create(name='Lee', email='123', roleName=None)
+    session.commit()
+    assert emp.role is None
+
+    get = repo.getByEmail('123')
+    assert get is not None
+    assert get.role is None

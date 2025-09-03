@@ -38,13 +38,16 @@ def addEmployee(
     role: str | None = typer.Option(None, "--role", "-r", help="Role"),
     maxHours: int = typer.Option(20, "--max-hours", "-m", min=0, help="Max working hours/week"),
 ):
+    if role is None or not role.strip():
+        typer.secho("No role specified, will default to None.", fg="yellow")
+        role = None
+
     with session_scope() as s:
-        emp = EmployeeRepo(s).create(
-            name=name, email=email, roleName=role, maxHours=maxHours
-        )
-        typer.echo(
-            f"Created employee {emp.name}, {emp.role} id: {emp.id} email: {emp.email}"
-        )
+        emp = EmployeeRepo(s).create(name=name, email=email, roleName=role, maxHours=maxHours)
+        if emp.role is None:
+            typer.echo(f"Created employee {emp.name}, ID: {emp.id}, email: {emp.email}, role: None")
+        else:
+            typer.echo(f"Created employee {emp.name}, ID: {emp.id}, email: {emp.email}, role: {emp.role}")
 
 @app.command("add-unavailability")
 def addUnavailability(

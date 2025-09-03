@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 def toDomainEmployee(o: ormEmployee) -> domainEmployee:
     return domainEmployee(
         id = o.id, name = o.name, email = o.email,
-        role = o.role.name, maxHours = o.max_hours, active = o.active
+        role = o.role.name if o.role else None, maxHours = o.max_hours, active = o.active
     )
 
 def toDomainUnavailability(o: ormUnavailability) -> domainUnavailability:
@@ -20,7 +20,7 @@ def toDomainUnavailability(o: ormUnavailability) -> domainUnavailability:
 
 def updateRole(session, roleName: str | None) -> roleObject | None:
     if roleName is None or not roleName.strip():
-        raise ValueError("role_name must be a non-empty string")
+        return None
     roleName = roleName.strip()
     role = session.scalar(select(roleObject).where(roleObject.name == roleName))
     if not role:
