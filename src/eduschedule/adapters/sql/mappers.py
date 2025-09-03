@@ -6,11 +6,9 @@ from sqlalchemy import select
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
-def toDomainEmployee(o: ormEmployee) -> domainEmployee:
-    return domainEmployee(
-        id = o.id, name = o.name, email = o.email,
-        role = o.role.name if o.role else None, maxHours = o.max_hours, active = o.active
-    )
+def toDomainEmployee(o: ormEmployee, *, withUnavailability: bool=False) -> domainEmployee:
+    unvs = [toDomainUnavailability(i) for i in o.unavailabilities] if withUnavailability else []
+    return domainEmployee(id=o.id, name=o.name, email=o.email, role=o.role.name, maxHours=o.max_hours, active=o.active, unavailabilities=unvs,)
 
 def toDomainUnavailability(o: ormUnavailability) -> domainUnavailability:
     return domainUnavailability(

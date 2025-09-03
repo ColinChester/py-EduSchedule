@@ -1,6 +1,8 @@
 from sqlalchemy.exc import IntegrityError
 from eduschedule.adapters.sql.repositories.employees import EmployeeRepo
+from eduschedule.adapters.sql.repositories.unavailabilities import UnavailabilityRepo
 from eduschedule.adapters.sql.mappers import updateRole
+from datetime import datetime, timedelta, timezone
 
 def testCreateFetch(session):
     repo = EmployeeRepo(session)
@@ -39,3 +41,22 @@ def testCreateWithoutRole(session):
     get = repo.getByEmail('123')
     assert get is not None
     assert get.role is None
+
+def testListWithUnavailabilities(session):
+    eRepo = EmployeeRepo(session)
+    uRepo = UnavailabilityRepo(session)
+    emp1 = eRepo.create(name="A", email="a@example.com", roleName="r1")
+    emp2 = eRepo.create(name="B", email="b@example.com", roleName="r2")
+    session.commit()
+
+    start = datetime(2020, 1, 1, 12, 0, tzinfo=timezone.utc)
+    uRepo.create(employeeId=emp1.id, startTime=start, endTime=start + timedelta(hours=1))
+    uRepo.create(employeeId=emp2.id, startTime=start, endTime=start + timedelta(hours=2))
+    session.commit()
+
+    employees = eRepo.listWithUnavailabilities()
+    by_id = {e.id: e for e in employees}
+
+    assert len(by_id[emp1.id].unavailabilities) == 1
+    assert by_id[emp1.id].unavailabilities[0].employeeId == emp1.id
+    assert len(by_id[emp2.id].unavailabilities) == 1

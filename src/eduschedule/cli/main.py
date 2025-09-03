@@ -56,7 +56,7 @@ def addUnavailability(
     endTime: str = typer.Option(..., help="Unavailability end time"),
     timeZone: str = typer.Option("America/New_York", "--time-zone", "-z", help="Local timezone"),
     note: str | None = typer.Option(None, "--note", "-n", help="Note regarding unavailability (time off, sick, etc.)"),
-    noOverlap: bool = typer.Option(False, "--no-overlap", "-o", help="prevents overlapping with existing availabilities (True/False)")
+    allowOverlap: bool = typer.Option(False, "--allow-overlap", "-o", help="prevents overlapping with existing availabilities (True/False)")
 ):
     with session_scope() as s:
         emp = s.scalar(select(Employee).where(Employee.id == employeeId))
@@ -66,9 +66,7 @@ def addUnavailability(
         startUTC = localToUTC(_parseLocalTime(startTime), timeZone)
         endUTC = localToUTC(_parseLocalTime(endTime), timeZone)
         
-        unv = UnavailabilityRepo(s).create(
-            employeeId=emp.id, startTime=startUTC, endTime=endUTC, note=note, allowOverlap=not noOverlap
-        )
+        unv = UnavailabilityRepo(s).create(employeeId=emp.id, startTime=startUTC, endTime=endUTC, note=note, checkOverlap=not allowOverlap)
         typer.echo(f'Created unavailability [{startTime} -> {endTime} tz: {timeZone}] (id: {unv.id}) for employee {emp.name} (id: {emp.id})')
 
 @app.command("list-employees")
@@ -84,13 +82,21 @@ def listEmployees():
 def listUnavailabilities(
     employeeId: int = typer.Option(..., help="Employee ID (as it appears in the database)"),
     timeZone: str = typer.Option("America/New_York", "--time-zone", "-z", help="Local timezone"),
+    startTime: str | None = typer.Option(None, "--start-time", "-st", help="Start of search range"),
+    endTime: str | None = typer.Option(None, "--end-time", "-et", help="End of search range"),
 ):
     with session_scope() as s:
         emp = s.scalar(select(Employee).where(Employee.id == employeeId))
         if not emp:
             _fail(f"Employee not found at employee id: {employeeId}")
-        
-        unvs = UnavailabilityRepo(s).viewUnavailabilities(employeeId)
+        if startTime and endTime:
+            startUTC = localToUTC(_parseLocalTime(startTime), timeZone)
+            endUTC = localToUTC(_parseLocalTime(endTime), timeZone)
+            unvs = UnavailabilityRepo(s).listUnavailabilitiesBetween(startUTC, endUTC)
+        elif startTime or endTime:
+            _fail("Specify both start and end times")
+        else:
+            unvs = UnavailabilityRepo(s).viewUnavailabilities(employeeId)
         if not unvs:
             typer.echo("No unavailabilities found")
             return
@@ -158,7 +164,10 @@ def statsForNerds():
 
 def _parseLocalTime(time: str) -> datetime: # Format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM
     time = time.replace("T", " ")
-    return datetime.fromisoformat(time)
+    dt = datetime.fromisoformat(time)
+    if dt.tzinfo is None or dt.tzinfo.utcoffset(dt) is None:
+        typer.secho('Parsed time without timezone, interpreting as local time', fg="yellow")
+    return dt
 
 def _fail(msg: str, code: int = 1):
     typer.secho(msg, fg='red', err=True)

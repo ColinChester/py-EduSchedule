@@ -1,6 +1,6 @@
 from __future__ import annotations
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from eduschedule.domain.employee import Employee as domainEmployee
 from eduschedule.adapters.sql.models.employee import Employee as ormEmployee
 from eduschedule.adapters.sql.mappers import toDomainEmployee, updateRole
@@ -28,3 +28,8 @@ class EmployeeRepo:
     
     def list(self) -> list[domainEmployee]:
         return [toDomainEmployee(e) for e in self.s.scalars(select(ormEmployee)).all()]
+
+    def listWithUnavailabilities(self) -> list[domainEmployee]:
+        stmt = select(ormEmployee).options(selectinload(ormEmployee.unavailabilities))
+        emps = self.s.scalars(stmt).unique().all()
+        return [toDomainEmployee(i, withUnavailability=True) for i in emps]

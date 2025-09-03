@@ -10,11 +10,15 @@ class UnavailabilityRepo:
     def __init__(self, s: Session):
         self.s = s
     
-    def create(self, *, employeeId: int, startTime: datetime, endTime: datetime, note: str | None = None, allowOverlap: bool = True) -> domainUnavailability:
+    def create(self, *, employeeId: int, startTime: datetime, endTime: datetime, note: str | None = None, checkOverlap: bool = True) -> domainUnavailability:
+        if startTime.tzinfo is None or startTime.tzinfo.utcoffset(startTime) is None:
+            raise ValueError("startTime must be timezone-aware")
+        if endTime.tzinfo is None or endTime.tzinfo.utcoffset(endTime) is None:
+            raise ValueError("endTime must be timezone-aware")
         if endTime <= startTime:
             raise ValueError('End time must be before start time.')
         
-        if allowOverlap and self.conflicts(employeeId, startTime, endTime):
+        if checkOverlap and self.conflicts(employeeId, startTime, endTime):
             raise ValueError('Interval overlaps with existing unavailability')
         oUnavailability = ormUnavailability(employee_id=employeeId, start_utc=startTime, end_utc=endTime, note=note)
         self.s.add(oUnavailability)
@@ -27,7 +31,13 @@ class UnavailabilityRepo:
                              .order_by(ormUnavailability.start_utc)
                             )
         return [toDomainUnavailability(i) for i in unv]
-    
+
+    def listUnavailabilitiesBetween(self, employeeId: int, start: datetime, end: datetime) -> list[domainUnavailability]:
+        if end <= start:
+            raise ValueError('End time must be before start time.')
+        unv = self.s.scalars(select(ormUnavailability).where(and_(ormUnavailability.employee_id == employeeId, ormUnavailability.start_utc >= start, ormUnavailability.start_utc <= end)).order_by(ormUnavailability.start_utc))
+        return [toDomainUnavailability(i) for i in unv]
+
     def conflicts(self, employeeId: int, startTime: datetime, endTime: datetime) -> bool:
         test = (select(ormUnavailability).where(and_(ormUnavailability.employee_id == employeeId,
                 ormUnavailability.start_utc < endTime, ormUnavailability.end_utc > startTime)).limit(1))
