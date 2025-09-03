@@ -2,7 +2,7 @@ from sqlalchemy.exc import IntegrityError
 from eduschedule.adapters.sql.repositories.employees import EmployeeRepo
 from eduschedule.adapters.sql.mappers import updateRole
 
-def createFetchTest(session):
+def testCreateFetch(session):
     repo = EmployeeRepo(session)
     emp = repo.create(name='Alex', email='alex@example.com', roleName='flexer')
     session.commit()
@@ -14,7 +14,7 @@ def createFetchTest(session):
     assert emp.maxHours == 20
     assert emp.active is True
 
-def uniqueEmailTest(session):
+def testUniqueEmail(session):
     repo = EmployeeRepo(session)
     repo.create(name='C', email='abc', roleName='123')
     session.commit()
@@ -25,7 +25,7 @@ def uniqueEmailTest(session):
     except IntegrityError:
         session.rollback()
 
-def createRoleRow(session):
+def testCreateRoleRow(session):
     r = updateRole(session, "Bag-Chaser")
     session.commit()
     assert r.id is not None

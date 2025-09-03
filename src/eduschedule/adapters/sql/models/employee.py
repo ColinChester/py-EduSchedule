@@ -2,6 +2,10 @@ from __future__ import annotations
 from sqlalchemy import String, Integer, Boolean, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from eduschedule.adapters.sql.base import Base
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .unavailability import Unavailability
 
 class Role(Base):
     __tablename__ = 'roles'
@@ -18,6 +22,7 @@ class Employee(Base):
     name: Mapped[str] = mapped_column(String(120), index=True)
     email: Mapped[str] = mapped_column(String(255), unique=True)
     active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+    unavailabilities: Mapped[list['Unavailability']] = relationship('Unavailability', back_populates="employee", cascade="all, delete-orphan")
     max_hours: Mapped[int] = mapped_column(Integer, default=20)
     role: Mapped[Role] = relationship(back_populates="employees")
     

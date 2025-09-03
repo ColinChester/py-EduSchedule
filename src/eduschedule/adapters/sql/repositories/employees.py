@@ -11,10 +11,10 @@ class EmployeeRepo:
     
     def create(self, *, name: str, email: str, roleName: str | None, maxHours: int=20) -> domainEmployee:
         role = updateRole(self.s, roleName)
-        employeeO = ormEmployee(name=name, email=email, role=role, max_hours=maxHours, active=True)
-        self.s.add(employeeO)
+        oEmployee = ormEmployee(name=name, email=email, role=role, max_hours=maxHours, active=True)
+        self.s.add(oEmployee)
         self.s.flush()
-        return toDomainEmployee(employeeO)
+        return toDomainEmployee(oEmployee)
     
     def getByEmail(self, email: str) -> domainEmployee | None:
         emp = self.s.scalar(select(ormEmployee).where(ormEmployee.email == email))

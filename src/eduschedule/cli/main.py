@@ -2,14 +2,19 @@ import csv
 import os
 import subprocess
 import sys
-from typing import Optional
+from pathlib import Path
+from sqlalchemy import select
 import typer
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 from eduschedule.adapters.sql.engine import session_scope
+from eduschedule.adapters.sql.mappers import localToUTC
 from eduschedule.adapters.sql.repositories.employees import EmployeeRepo
+from eduschedule.adapters.sql.models.employee import Employee
+from eduschedule.adapters.sql.repositories.unavailabilities import UnavailabilityRepo
 
 app = typer.Typer(help="EduSchedule CLI")
-
 
 @app.command("db-init")
 def dbInit():
@@ -28,12 +33,10 @@ def dbInit():
     help="Enter first and last names as one argument with no spaces. Role and max_hours default to None and 20 respectively.",
 )
 def addEmployee(
-    name: str = typer.Option(..., help="Full name"),
+    name: str = typer.Option(..., help="Full name, e.g. JohnDoe"),
     email: str = typer.Option(..., help="Email"),
-    role: Optional[str] = typer.Option(None, "--role", "-r", help="Role"),
-    maxHours: int = typer.Option(
-        20, "--max-hours", "-m", min=0, help="Max working hours/week"
-    ),
+    role: str | None = typer.Option(None, "--role", "-r", help="Role"),
+    maxHours: int = typer.Option(20, "--max-hours", "-m", min=0, help="Max working hours/week"),
 ):
     with session_scope() as s:
         emp = EmployeeRepo(s).create(
@@ -43,6 +46,27 @@ def addEmployee(
             f"Created employee {emp.name}, {emp.role} id: {emp.id} email: {emp.email}"
         )
 
+@app.command("add-unavailability")
+def addUnavailability(
+    employeeId: int = typer.Option(..., help="Employee ID (as it appears in the database)"),
+    startTime: str = typer.Option(..., help="Unavailability start time, e.g. '2025-08-27 09:00'"),
+    endTime: str = typer.Option(..., help="Unavailability end time"),
+    timeZone: str = typer.Option("America/New_York", "--time-zone", "-z", help="Local timezone"),
+    note: str | None = typer.Option(None, "--note", "-n", help="Note regarding unavailability (time off, sick, etc.)"),
+    noOverlap: bool = typer.Option(False, "--no-overlap", "-o", help="prevents overlapping with existing availabilities (True/False)")
+):
+    with session_scope() as s:
+        emp = s.scalar(select(Employee).where(Employee.id == employeeId))
+        if not emp:
+            _fail(f"Employee not found at employee ID: {employeeId}")
+        
+        startUTC = localToUTC(_parseLocalTime(startTime), timeZone)
+        endUTC = localToUTC(_parseLocalTime(endTime), timeZone)
+        
+        unv = UnavailabilityRepo(s).create(
+            employeeId=emp.id, startTime=startUTC, endTime=endUTC, note=note, allowOverlap=not noOverlap
+        )
+        typer.echo(f'Created unavailability [{startTime} -> {endTime} tz: {timeZone}] (id: {unv.id}) for employee {emp.name} (id: {emp.id})')
 
 @app.command("list-employees")
 def listEmployees():
@@ -53,6 +77,25 @@ def listEmployees():
                 f"{e.id}\t{e.name}\t{e.email}\trole: {e.role}\tmax hours: {e.maxHours}"
             )
 
+@app.command("list-unavailabilities")
+def listUnavailabilities(
+    employeeId: int = typer.Option(..., help="Employee ID (as it appears in the database)"),
+    timeZone: str = typer.Option("America/New_York", "--time-zone", "-z", help="Local timezone"),
+):
+    with session_scope() as s:
+        emp = s.scalar(select(Employee).where(Employee.id == employeeId))
+        if not emp:
+            _fail(f"Employee not found at employee id: {employeeId}")
+        
+        unvs = UnavailabilityRepo(s).viewUnavailabilities(employeeId)
+        if not unvs:
+            typer.echo("No unavailabilities found")
+            return
+        tz = ZoneInfo(timeZone)
+        for i in unvs:
+            startLocal = i.startUTC.astimezone(tz).strftime("%Y-%m-%d %H:%M")
+            endLocal = i.endUTC.astimezone(tz).strftime("%Y-%m-%d %H:%M")
+            typer.echo(f'{i.id}\t{startLocal} -> {endLocal}\tnote: {i.note}')
 
 @app.command("parse-roles")
 def parseRoles(
@@ -110,6 +153,13 @@ def statsForNerds():
         f'Package importable, Database URL: {os.getenv("DATABASE_URL", DATABASE_URL)}'
     )
 
+def _parseLocalTime(time: str) -> datetime: # Format: YYYY-MM-DD HH:MM or YYYY-MM-DDTHH:MM
+    time = time.replace("T", " ")
+    return datetime.fromisoformat(time)
+
+def _fail(msg: str, code: int = 1):
+    typer.secho(msg, fg='red', err=True)
+    raise typer.Exit(code)
 
 if __name__ == "__main__":
     app()

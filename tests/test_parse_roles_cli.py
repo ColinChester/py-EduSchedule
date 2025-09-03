@@ -2,7 +2,7 @@ from typer.testing import CliRunner
 from eduschedule.cli.main import app
 
 
-def test_parse_roles(tmp_path):
+def testParseRoles(tmp_path):
     csv_content = (
         "Role,Emp1,Emp2\nInstructor,Alice Smith,Bob Jones\nAssistant,Charlie Brown\n"
     )
