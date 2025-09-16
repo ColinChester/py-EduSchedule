@@ -80,7 +80,7 @@ def listEmployees():
 
 @app.command("list-unavailabilities")
 def listUnavailabilities(
-    employeeId: int = typer.Option(..., help="Employee ID (as it appears in the database)"),
+    employeeId: int = typer.Option(..., "--employee-id", help="Employee ID (as it appears in the database)"),
     timeZone: str = typer.Option("America/New_York", "--time-zone", "-z", help="Local timezone"),
     startTime: str | None = typer.Option(None, "--start-time", "-st", help="Start of search range"),
     endTime: str | None = typer.Option(None, "--end-time", "-et", help="End of search range"),
@@ -92,7 +92,7 @@ def listUnavailabilities(
         if startTime and endTime:
             startUTC = localToUTC(_parseLocalTime(startTime), timeZone)
             endUTC = localToUTC(_parseLocalTime(endTime), timeZone)
-            unvs = UnavailabilityRepo(s).listUnavailabilitiesBetween(startUTC, endUTC)
+            unvs = UnavailabilityRepo(s).listUnavailabilitiesBetween(employeeId, startUTC, endUTC)
         elif startTime or endTime:
             _fail("Specify both start and end times")
         else:

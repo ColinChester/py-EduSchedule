@@ -16,6 +16,7 @@ class EmployeeRepo:
             oEmployee.role = role
         self.s.add(oEmployee)
         self.s.flush()
+        self.s.commit()
         return toDomainEmployee(oEmployee)
     
     def getByEmail(self, email: str) -> domainEmployee | None:
