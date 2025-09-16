@@ -13,6 +13,7 @@ def _makeEngine():
     def foreignKeyOn(dbapiConn, _):
         try:
             dbapiConn.execute("PRAGMA foreign_keys=ON")
+            dbapiConn.execute("PRAGMA read_uncommitted = true")
         except Exception:
             pass
     return eng

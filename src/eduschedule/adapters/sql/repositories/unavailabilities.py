@@ -23,6 +23,7 @@ class UnavailabilityRepo:
         oUnavailability = ormUnavailability(employee_id=employeeId, start_utc=startTime, end_utc=endTime, note=note)
         self.s.add(oUnavailability)
         self.s.flush()
+        self.s.commit()
         return toDomainUnavailability(oUnavailability)
     
     def viewUnavailabilities(self, employeeId: int):
