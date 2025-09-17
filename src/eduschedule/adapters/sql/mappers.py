@@ -15,9 +15,18 @@ def toDomainEmployee(o: ormEmployee, *, withUnavailability: bool=False, withSche
     return domainEmployee(id=o.id, name=o.name, email=o.email, role=role, maxHours=o.max_hours, active=o.active, unavailabilities=unvs, schedules=schs)
 
 def toDomainUnavailability(o: ormUnavailability) -> domainUnavailability:
+    start = o.start_utc
+    end = o.end_utc
+    if start.tzinfo is None or start.tzinfo.utcoffset(start) is None:
+        start = start.replace(tzinfo=timezone.utc)
+    if end.tzinfo is None or end.tzinfo.utcoffset(end) is None:
+        end = end.replace(tzinfo=timezone.utc)
     return domainUnavailability(
-        id = o.id, employeeId = o.employee_id, startUTC = o.start_utc,
-        endUTC = o.end_utc, note = o.note
+        id=o.id,
+        employeeId=o.employee_id,
+        startUTC=start,
+        endUTC=end,
+        note=o.note,
     )
 
 def toDomainSchedule(o: ormSchedule) -> domainSchedule:

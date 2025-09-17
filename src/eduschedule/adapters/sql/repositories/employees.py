@@ -8,7 +8,7 @@ from eduschedule.adapters.sql.mappers import toDomainEmployee, updateRole
 class EmployeeRepo:
     def __init__(self, s: Session):
         self.s = s
-    
+
     def create(self, *, name: str, email: str, roleName: str | None, maxHours: int=20) -> domainEmployee:
         role = updateRole(self.s, roleName)
         oEmployee = ormEmployee(name=name, email=email, max_hours=maxHours, active=True)
@@ -28,9 +28,34 @@ class EmployeeRepo:
         return toDomainEmployee(emp) if emp else None
     
     def list(self) -> list[domainEmployee]:
-        return [toDomainEmployee(e) for e in self.s.scalars(select(ormEmployee)).all()]
+        return self._list()
 
     def listWithUnavailabilities(self) -> list[domainEmployee]:
-        stmt = select(ormEmployee).options(selectinload(ormEmployee.unavailabilities))
+        return self._list(with_unavailability=True)
+
+    def listWithDetails(self, *, active_only: bool = True) -> list[domainEmployee]:
+        return self._list(with_unavailability=True, with_schedules=True, active_only=active_only)
+
+    def _list(
+        self,
+        *,
+        with_unavailability: bool = False,
+        with_schedules: bool = False,
+        active_only: bool = False,
+    ) -> list[domainEmployee]:
+        stmt = select(ormEmployee).order_by(ormEmployee.id)
+        if active_only:
+            stmt = stmt.where(ormEmployee.active.is_(True))
+        if with_unavailability:
+            stmt = stmt.options(selectinload(ormEmployee.unavailabilities))
+        if with_schedules:
+            stmt = stmt.options(selectinload(ormEmployee.schedules))
         emps = self.s.scalars(stmt).unique().all()
-        return [toDomainEmployee(i, withUnavailability=True) for i in emps]
+        return [
+            toDomainEmployee(
+                emp,
+                withUnavailability=with_unavailability,
+                withSchedules=with_schedules,
+            )
+            for emp in emps
+        ]
