@@ -1,7 +1,10 @@
 [project]
 name = "eduschedule"
-version = "0.1.0"
-requires-python = ">=3.11"
+version = "0.0.1"
+description = "Employee scheduling tool using unavailabilities to generate schedules"
+authors = [{ name = "Colin Chester", email = "colinchester05@gmail.com" }]
+requires-python = ">=3.10"
+
 dependencies = [
   "SQLAlchemy>=2.0",
   "alembic>=1.13",
@@ -17,3 +20,33 @@ dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.5", "black>=24.8", "mypy>=1.10"]
 
 [project.scripts]
 eduschedule = "eduschedule.cli.main:app"
+
+[tool.briefcase.app.eduschedule]
+formal_name = "EduSchedule"
+description = "Employee scheduling tool"
+author = "Colin Chester"
+author_email = "colinchester05@gmail.com"
+license = "MIT"
+url = "https://github.com/ColinChester/EduSchedule"
+
+# Source code lives here
+sources = ["src/eduschedule"]
+
+# CLI entry point (Typer app)
+entry_point = "eduschedule.cli.main:app"
+
+# CLI-style app (no GUI yet)
+app_type = "console"
+
+# Version (sync with [project].version)
+version = "0.0.1"
+
+# Platform-specific sections (optional, can be expanded later)
+[tool.briefcase.app.eduschedule.macOS]
+requires = ["briefcase"]
+
+[tool.briefcase.app.eduschedule.windows]
+requires = ["briefcase"]
+
+[tool.briefcase.app.eduschedule.linux]
+requires = ["briefcase"]
