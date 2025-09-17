@@ -21,27 +21,22 @@ dev = ["pytest>=8", "hypothesis>=6", "ruff>=0.5", "black>=24.8", "mypy>=1.10"]
 [project.scripts]
 eduschedule = "eduschedule.cli.main:app"
 
+license = { file = "LICENSE" }
+
 [tool.briefcase.app.eduschedule]
 formal_name = "EduSchedule"
+bundle = "com.colinchester"
+project_name = "eduschedule"
 description = "Employee scheduling tool"
 author = "Colin Chester"
 author_email = "colinchester05@gmail.com"
-license = "MIT"
 url = "https://github.com/ColinChester/EduSchedule"
 
-# Source code lives here
 sources = ["src/eduschedule"]
-
-# CLI entry point (Typer app)
 entry_point = "eduschedule.cli.main:app"
-
-# CLI-style app (no GUI yet)
 app_type = "console"
-
-# Version (sync with [project].version)
 version = "0.0.1"
 
-# Platform-specific sections (optional, can be expanded later)
 [tool.briefcase.app.eduschedule.macOS]
 requires = ["briefcase"]
 
